@@ -1,12 +1,12 @@
 import UIKit
 
 final class MovieQuizViewController: UIViewController {
-    @IBOutlet private weak var QuestionLabel: UILabel!
-    @IBOutlet private weak var PreviewImage: UIImageView!
-    @IBOutlet private weak var IndexLabel: UILabel!
-    @IBOutlet private weak var Nobutton: UIButton!
-    @IBOutlet private weak var Yesbutton: UIButton!
-    @IBOutlet private weak var QuestionTitleLabel: UILabel!
+    @IBOutlet private weak var questionLabel: UILabel!
+    @IBOutlet private weak var previewImage: UIImageView!
+    @IBOutlet private weak var indexLabel: UILabel!
+    @IBOutlet private weak var nobutton: UIButton!
+    @IBOutlet private weak var yesbutton: UIButton!
+    @IBOutlet private weak var questionTitleLabel: UILabel!
     
     private struct QuizStepViewModel {
       let image: UIImage
@@ -35,6 +35,7 @@ final class MovieQuizViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupFont()
+        setupImageView()
         let currentQuiestion = questions[currentQuestionIndex]
         let viewModel = convert(model: currentQuiestion)
         show(quiz: viewModel)
@@ -56,17 +57,26 @@ final class MovieQuizViewController: UIViewController {
     
     //Функция для установки шрифтов
     private func setupFont(){
-        IndexLabel.font = UIFont(name: "YSDispaly-medium", size: 20)
-        QuestionLabel.font = UIFont(name: "YSDisplay-bold", size: 23)
-        Yesbutton.titleLabel?.font = UIFont(name: "YSDispaly-medium", size: 20)
-        Nobutton.titleLabel?.font = UIFont(name: "YSDispaly-medium", size: 20)
-        QuestionTitleLabel.font = UIFont(name: "YSDispaly-medium", size: 20)
+        let fontBold = UIFont.ysDisplayBold(size: 23)
+        let fontMedium = UIFont.ysDisplayMedium(size: 20)
+        questionLabel.font = fontBold
+        indexLabel.font = fontMedium
+        yesbutton.titleLabel?.font = fontMedium
+        nobutton.titleLabel?.font = fontMedium
+        questionTitleLabel.font = fontMedium
+    }
+    
+    //функция настройки рвмки изображения
+    private func setupImageView(){
+        previewImage.layer.masksToBounds = true
+        previewImage.layer.borderWidth = 8
+        previewImage.layer.cornerRadius = 20
     }
     
     //Функция отключения кнопок(антиспам)
     private func toggleButtons(isEnabled: Bool){
-        Nobutton.isEnabled = isEnabled
-        Yesbutton.isEnabled = isEnabled
+        nobutton.isEnabled = isEnabled
+        yesbutton.isEnabled = isEnabled
     }
     
     //Конвертация вопроса для отображения
@@ -75,12 +85,11 @@ final class MovieQuizViewController: UIViewController {
         return QuizStepViewModel(image: UIImage(named: model.image) ?? UIImage(), question: model.text, questionNumber: questionNumber)
     }
     
-    
     //Функция отображения текущего вопроса
     private func show(quiz step: QuizStepViewModel){
-        PreviewImage.image = step.image
-        QuestionLabel.text = step.question
-        IndexLabel.text = step.questionNumber
+        previewImage.image = step.image
+        questionLabel.text = step.question
+        indexLabel.text = step.questionNumber
     }
     
     //Функция отображения алерта об окончании квиза
@@ -92,7 +101,7 @@ final class MovieQuizViewController: UIViewController {
             let currentQuiestion = self.questions[self.currentQuestionIndex]
             let viewModel = self.convert(model: currentQuiestion)
             self.show(quiz: viewModel)
-            self.PreviewImage.layer.borderColor = UIColor.clear.cgColor
+            self.previewImage.layer.borderColor = UIColor.clear.cgColor
         }
         alert.addAction(action)
         self.present(alert, animated: true, completion: nil)
@@ -100,14 +109,11 @@ final class MovieQuizViewController: UIViewController {
     
     //Функция покраски рамки изображения после ответа
     private func showAnswerResult(isCorrect: Bool) {
-        PreviewImage.layer.masksToBounds = true
-        PreviewImage.layer.borderWidth = 8
-        PreviewImage.layer.cornerRadius = 20
-        if isCorrect{
+        if isCorrect {
             correctAnswer += 1
-            PreviewImage.layer.borderColor = UIColor.ypGreen.cgColor
-        }else{
-            PreviewImage.layer.borderColor = UIColor.ypRed.cgColor
+            previewImage.layer.borderColor = UIColor.ypGreen.cgColor
+        } else {
+            previewImage.layer.borderColor = UIColor.ypRed.cgColor
         }
         toggleButtons(isEnabled: false)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0){
@@ -118,14 +124,14 @@ final class MovieQuizViewController: UIViewController {
     
     //Функция отображения результата ответа
     private func showNextQuestionOrResult(){
-        if currentQuestionIndex == questions.count - 1{
+        if currentQuestionIndex == questions.count - 1 {
             let result = QuizResultViewModel(title: "Этот раунд окончен", text: "Ваш результат: \(correctAnswer)/\(questions.count)", buttonText: "Сыграть ещё раз")
             show(quiz: result)
-        }else{
+        } else {
             currentQuestionIndex += 1
             let nextQuestion = questions[currentQuestionIndex]
             let viewModel = convert(model: nextQuestion)
-            PreviewImage.layer.borderColor = UIColor.clear.cgColor
+            previewImage.layer.borderColor = UIColor.clear.cgColor
             show(quiz: viewModel)
         }
     }
