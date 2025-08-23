@@ -1,6 +1,6 @@
 import UIKit
 
-final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, AlertPresenterDelegate {
+final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
     @IBOutlet private weak var questionLabel: UILabel!
     @IBOutlet private weak var previewImage: UIImageView!
     @IBOutlet private weak var indexLabel: UILabel!
@@ -13,8 +13,11 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
     private let questionsAmount: Int = 10
     private var questionFactory: QuestionFactoryProtocol?
     private var currentQuestion: QuizQuestion?
+    private var alertPresenter = AlertPresenter()
+    private var statisticService: StatisticServiceProtocol?
     
     // MARK: - Lifecycle
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         setupFont()
@@ -23,7 +26,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
         questionFactory.delegate = self
         self.questionFactory = questionFactory
         self.questionFactory?.requestNextQuestion()
-        
+        statisticService = StatisticService()
     }
     
     // MARK: - QuestionFactoryDelegate
@@ -95,18 +98,34 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
         indexLabel.text = step.questionNumber
     }
     
-    func newGame(){
+    //Функция для начала новой игры
+    private func newGame(){
         currentQuestionIndex = 0
         correctAnswer = 0
         questionFactory?.requestNextQuestion()
         previewImage.layer.borderColor = UIColor.clear.cgColor
     }
     
+    //Функция генерации сообщения статистики
+    private func makeStatisticMessage(statistic: StatisticServiceProtocol?, current gameMessage: String) -> String{
+        guard let gamesCount = statistic?.gamesCount else {return gameMessage}
+        guard let correctAnswers = statistic?.bestGame.correct else {return gameMessage}
+        guard let questionCount = statistic?.bestGame.total else {return gameMessage}
+        guard let date = statistic?.bestGame.date else {return gameMessage}
+        guard let accuracy = statistic?.totalAccuracy else {return gameMessage}
+        var statMessage: String = ""
+        statMessage += gameMessage + "\nКоличество сыграных квизов: \(gamesCount)\nРекород: \(correctAnswers)/\(questionCount) (\(date.dateTimeString))\n Средняя точность: \(String(format: "%.2f", accuracy))%"
+        return statMessage
+    }
+    
     //Функция отображения алерта об окончании квиза
     private func show(quiz result: QuizResultViewModel){
-        let alert = AlertModel(title: result.title, message: result.text, buttonText: result.buttonText, completion: nil)
-        let alertPresenter = AlertPresenter()
-        alertPresenter.delegate = self
+        statisticService?.store(correct: correctAnswer, total: questionsAmount)
+        let message = makeStatisticMessage(statistic: statisticService, current: result.text)
+        let alert = AlertModel(title: result.title, message: message, buttonText: result.buttonText, completion: {[weak self] in
+            guard let self = self else { return }
+            self.newGame()
+        })
         alertPresenter.alertPresten(vc: self, alertModel: alert)
     }
     
