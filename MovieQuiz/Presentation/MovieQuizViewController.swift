@@ -13,7 +13,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
     private let questionsAmount: Int = 10
     private var questionFactory: QuestionFactoryProtocol?
     private var currentQuestion: QuizQuestion?
-    private var alertPresenter = AlertPresenter()
     private var statisticService: StatisticServiceProtocol?
     
     // MARK: - Lifecycle
@@ -113,8 +112,12 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
         guard let questionCount = statistic?.bestGame.total else {return gameMessage}
         guard let date = statistic?.bestGame.date else {return gameMessage}
         guard let accuracy = statistic?.totalAccuracy else {return gameMessage}
-        var statMessage: String = ""
-        statMessage += gameMessage + "\nКоличество сыграных квизов: \(gamesCount)\nРекород: \(correctAnswers)/\(questionCount) (\(date.dateTimeString))\n Средняя точность: \(String(format: "%.2f", accuracy))%"
+        let statMessage = """
+           \(gameMessage)
+           Количество сыграных квизов: \(gamesCount)
+           Рекород: \(correctAnswers)/\(questionCount) (\(date.dateTimeString))
+           Средняя точность: \(String(format: "%.2f", accuracy))%
+           """
         return statMessage
     }
     
@@ -126,7 +129,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
             guard let self = self else { return }
             self.newGame()
         })
-        alertPresenter.alertPresten(vc: self, alertModel: alert)
+        AlertPresenter.alertPresten(vc: self, alertModel: alert)
     }
     
     //Функция покраски рамки изображения после ответа
