@@ -99,14 +99,19 @@
                                     </stackView>
                                 </subviews>
                             </stackView>
+                            <activityIndicatorView opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" style="medium" translatesAutoresizingMaskIntoConstraints="NO" id="agc-nq-aUs">
+                                <rect key="frame" x="197" y="438" width="20" height="20"/>
+                            </activityIndicatorView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" name="YP Black"/>
                         <constraints>
                             <constraint firstItem="hUw-HG-vnm" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" constant="20" id="1nA-0B-izf"/>
+                            <constraint firstItem="agc-nq-aUs" firstAttribute="centerY" secondItem="8bC-Xf-vdC" secondAttribute="centerY" id="Inu-G0-B0y"/>
                             <constraint firstItem="6Tk-OE-BBY" firstAttribute="trailing" secondItem="hUw-HG-vnm" secondAttribute="trailing" constant="20" id="PSh-w4-oHh"/>
                             <constraint firstItem="6Tk-OE-BBY" firstAttribute="bottom" secondItem="hUw-HG-vnm" secondAttribute="bottom" id="UQ6-GK-sLS"/>
                             <constraint firstItem="hUw-HG-vnm" firstAttribute="top" secondItem="6Tk-OE-BBY" secondAttribute="top" constant="10" id="cWT-px-KKB"/>
+                            <constraint firstItem="agc-nq-aUs" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="jrF-pE-uSK"/>
                         </constraints>
                     </view>
                     <connections>
@@ -116,6 +121,7 @@
                         <outlet property="QuestionLabel" destination="VZy-Uh-Ban" id="7Jf-sI-uhe"/>
                         <outlet property="QuestionTitleLabel" destination="Z44-NC-qnu" id="lEh-dL-zwy"/>
                         <outlet property="Yesbutton" destination="W4E-uv-fyU" id="JIs-C2-837"/>
+                        <outlet property="activityIndicator" destination="agc-nq-aUs" id="nYM-2e-jbj"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>

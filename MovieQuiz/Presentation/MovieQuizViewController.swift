@@ -1,17 +1,19 @@
 import UIKit
 
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
+
     @IBOutlet private weak var questionLabel: UILabel!
     @IBOutlet private weak var previewImage: UIImageView!
     @IBOutlet private weak var indexLabel: UILabel!
     @IBOutlet private weak var nobutton: UIButton!
     @IBOutlet private weak var yesbutton: UIButton!
     @IBOutlet private weak var questionTitleLabel: UILabel!
+    @IBOutlet private weak var activityIndicator: UIActivityIndicatorView!
     
     private var currentQuestionIndex = 0
     private var correctAnswer = 0
     private let questionsAmount: Int = 10
-    private var questionFactory: QuestionFactoryProtocol?
+    private var questionFactory: QuestionFactory?
     private var currentQuestion: QuizQuestion?
     private var statisticService: StatisticServiceProtocol?
     
@@ -21,10 +23,9 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
         super.viewDidLoad()
         setupFont()
         setupImageView()
-        let questionFactory = QuestionFactory()
-        questionFactory.delegate = self
-        self.questionFactory = questionFactory
-        self.questionFactory?.requestNextQuestion()
+        showLoadingIndicator()
+        questionFactory = QuestionFactory(delegate: self, moviesLoader: MoviesLoader())
+        questionFactory?.loadData()
         statisticService = StatisticService()
     }
     
@@ -59,11 +60,50 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
         showAnswerResult(isCorrect: answer == currentQuestion.correctAnswer)
     }
     
+    //Функция отвечающая за запрос следующего вопроса и отображение индикатора загрузки
+    func didLoadDataFromServer(){
+        activityIndicator.isHidden = true
+        questionFactory?.requestNextQuestion()
+    }
+    
+    //Функция отвечающая за показ алерта при неудачной загрузке данных из сети
+    func didFailToLoadDataFromServer(with error: Error) {
+        showNetworkError(message: error.localizedDescription)
+    }
+    
+    //Функция отвечающая за показ и старт анимации у индикатора загрузки
+    private func showLoadingIndicator() {
+        activityIndicator.isHidden = false
+        activityIndicator.startAnimating()
+    }
+    
+    //Функция отвечающая за скрытие и остановку анимации у индикатора загрузки
+    private func hideLoadingIndicator() {
+        activityIndicator.isHidden = true
+        activityIndicator.stopAnimating()
+    }
+    
+    
+    //Функция отвечающая за создание алерта при неудачной загрузке из сети
+    private func showNetworkError(message: String){
+        hideLoadingIndicator()
+        let alert = AlertModel(title: "Ошибка",
+                           message: message,
+                           buttonText: "Попробовать ещё раз") {[weak self] in
+            guard let self = self else { return }
+            self.currentQuestionIndex = 0
+            self.correctAnswer = 0
+            self.questionFactory?.requestNextQuestion()
+        }
+        AlertPresenter.alertPresten(vc: self, alertModel: alert)
+    }
+    
     //Функция для установки шрифтов
     private func setupFont(){
         let fontBold = UIFont.ysDisplayBold(size: 23)
         let fontMedium = UIFont.ysDisplayMedium(size: 20)
         questionLabel.font = fontBold
+        questionLabel.text = ""
         indexLabel.font = fontMedium
         yesbutton.titleLabel?.font = fontMedium
         nobutton.titleLabel?.font = fontMedium
@@ -87,7 +127,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
     //Конвертация вопроса для отображения
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
         let questionNumber = "\(currentQuestionIndex + 1)/\(questionsAmount)"
-        return QuizStepViewModel(image: UIImage(named: model.image) ?? UIImage(), question: model.text, questionNumber: questionNumber)
+        return QuizStepViewModel(image: UIImage(data: model.image) ?? UIImage(), question: model.text, questionNumber: questionNumber)
     }
     
     //Функция отображения текущего вопроса
