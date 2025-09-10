@@ -87,9 +87,11 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
     //Функция отвечающая за создание алерта при неудачной загрузке из сети
     private func showNetworkError(message: String){
         hideLoadingIndicator()
-        let alert = AlertModel(title: "Ошибка",
+        let title = "Ошибка"
+        let buttonText = "Попробовать ещё раз"
+        let alert = AlertModel(title: title,
                            message: message,
-                           buttonText: "Попробовать ещё раз") {[weak self] in
+                           buttonText: buttonText) {[weak self] in
             guard let self = self else { return }
             self.currentQuestionIndex = 0
             self.correctAnswer = 0
@@ -112,6 +114,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
     
     //функция настройки рвмки изображения
     private func setupImageView(){
+        previewImage.isHidden = true
         previewImage.layer.masksToBounds = true
         previewImage.layer.borderWidth = 8
         previewImage.layer.cornerRadius = 20
@@ -132,6 +135,9 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
     
     //Функция отображения текущего вопроса
     private func show(quiz step: QuizStepViewModel){
+        if previewImage.isHidden {
+            previewImage.isHidden = false
+        }
         previewImage.image = step.image
         questionLabel.text = step.question
         indexLabel.text = step.questionNumber
