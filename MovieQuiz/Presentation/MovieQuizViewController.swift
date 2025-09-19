@@ -1,6 +1,6 @@
 import UIKit
 
-final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
+final class MovieQuizViewController: UIViewController {
 
     @IBOutlet private weak var questionLabel: UILabel!
     @IBOutlet private weak var previewImage: UIImageView!
@@ -10,10 +10,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
     @IBOutlet private weak var questionTitleLabel: UILabel!
     @IBOutlet private weak var activityIndicator: UIActivityIndicatorView!
     
-    private var correctAnswer = 0
-    private var questionFactory: QuestionFactory?
     private var statisticService: StatisticServiceProtocol?
-    private let presenter = MovieQuizPresenter()
+    private var presenter: MovieQuizPresenter!
     
     // MARK: - Lifecycle
     
@@ -22,17 +20,13 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
         setupFont()
         setupImageView()
         showLoadingIndicator()
-        presenter.viewController = self
-        questionFactory = QuestionFactory(delegate: self, moviesLoader: MoviesLoader())
-        questionFactory?.loadData()
+        presenter = MovieQuizPresenter(viewController: self)
         statisticService = StatisticService()
     }
     
     // MARK: - QuestionFactoryDelegate
 
-    func didReceiveNextQuestion(question: QuizQuestion?) {
-        presenter.didReceiveNextQuestion(question: question)
-    }
+   
     
     //Нажатие на кнопку "Да"
     @IBAction private func yesButtonClicked(_ sender: Any) {
@@ -44,32 +38,21 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
         presenter.noButtonClicked()
     }
     
-    //Функция отвечающая за запрос следующего вопроса и отображение индикатора загрузки
-    func didLoadDataFromServer(){
-        activityIndicator.isHidden = true
-        questionFactory?.requestNextQuestion()
-    }
-    
-    //Функция отвечающая за показ алерта при неудачной загрузке данных из сети
-    func didFailToLoadDataFromServer(with error: Error) {
-        showNetworkError(message: error.localizedDescription)
-    }
-    
     //Функция отвечающая за показ и старт анимации у индикатора загрузки
-    private func showLoadingIndicator() {
+    func showLoadingIndicator() {
         activityIndicator.isHidden = false
         activityIndicator.startAnimating()
     }
     
     //Функция отвечающая за скрытие и остановку анимации у индикатора загрузки
-    private func hideLoadingIndicator() {
+    func hideLoadingIndicator() {
         activityIndicator.isHidden = true
         activityIndicator.stopAnimating()
     }
     
     
     //Функция отвечающая за создание алерта при неудачной загрузке из сети
-    private func showNetworkError(message: String){
+    func showNetworkError(message: String){
         hideLoadingIndicator()
         let title = "Ошибка"
         let buttonText = "Попробовать ещё раз"
@@ -77,9 +60,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
                            message: message,
                            buttonText: buttonText) {[weak self] in
             guard let self = self else { return }
-            self.presenter.resetCurrentQuestionIndex()
-            self.correctAnswer = 0
-            self.questionFactory?.requestNextQuestion()
+            self.presenter.restartGame()
+            
         }
         AlertPresenter.alertPresten(vc: self, alertModel: alert)
     }
@@ -116,19 +98,18 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
         if previewImage.isHidden {
             previewImage.isHidden = false
         }
+        previewImage.layer.borderColor = UIColor.clear.cgColor
         previewImage.image = step.image
         questionLabel.text = step.question
         indexLabel.text = step.questionNumber
     }
     
-    //Функция для начала новой игры
-    private func newGame(){
-        presenter.resetCurrentQuestionIndex()
-        correctAnswer = 0
-        questionFactory?.requestNextQuestion()
-        previewImage.layer.borderColor = UIColor.clear.cgColor
-    }
-    
+//    //Функция для начала новой игры
+//    private func newGame(){
+//        presenter.restartGame()
+//        previewImage.layer.borderColor = UIColor.clear.cgColor
+//    }
+//    
     //Функция генерации сообщения статистики
     private func makeStatisticMessage(statistic: StatisticServiceProtocol?, current gameMessage: String) -> String{
         guard let gamesCount = statistic?.gamesCount else {return gameMessage}
@@ -147,19 +128,19 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
     
     //Функция отображения алерта об окончании квиза
     func show(quiz result: QuizResultViewModel){
-        statisticService?.store(correct: correctAnswer, total: presenter.questionsAmount)
+        statisticService?.store(correct: presenter.correctAnswer, total: presenter.questionsAmount)
         let message = makeStatisticMessage(statistic: statisticService, current: result.text)
         let alert = AlertModel(title: result.title, message: message, buttonText: result.buttonText, completion: {[weak self] in
             guard let self = self else { return }
-            self.newGame()
+            self.presenter.restartGame()
         })
         AlertPresenter.alertPresten(vc: self, alertModel: alert)
     }
     
     //Функция покраски рамки изображения после ответа
     func showAnswerResult(isCorrect: Bool) {
+        presenter.didAnswer(isCorrectAnswer: isCorrect)
         if isCorrect {
-            correctAnswer += 1
             previewImage.layer.borderColor = UIColor.ypGreen.cgColor
         } else {
             previewImage.layer.borderColor = UIColor.ypRed.cgColor
@@ -167,10 +148,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
         toggleButtons(isEnabled: false)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0){[weak self] in
             guard let self = self else { return }
-            self.previewImage.layer.borderColor = UIColor.clear.cgColor
             self.presenter.showNextQuestionOrResult()
-            self.presenter.correctAnswer = self.correctAnswer
-            self.presenter.questionFactory = self.questionFactory
             self.toggleButtons(isEnabled: true)
         }
     }

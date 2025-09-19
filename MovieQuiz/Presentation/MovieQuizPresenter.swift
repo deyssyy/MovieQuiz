@@ -1,6 +1,6 @@
 import UIKit
 
-final class MovieQuizPresenter{
+final class MovieQuizPresenter: QuestionFactoryDelegate{
     let questionsAmount: Int = 10
     var correctAnswer: Int = 0
     private var currentQuestionIndex = 0
@@ -8,12 +8,53 @@ final class MovieQuizPresenter{
     weak var viewController: MovieQuizViewController?
     var questionFactory: QuestionFactoryProtocol?
     
+    init(viewController: MovieQuizViewController) {
+        self.viewController = viewController
+        
+        questionFactory = QuestionFactory(delegate: self, moviesLoader: MoviesLoader())
+        questionFactory?.loadData()
+        viewController.showLoadingIndicator()
+    }
+  
+    //Функция отвечающая за запрос следующего вопроса и отображение индикатора загрузки
+    func didLoadDataFromServer(){
+        viewController?.hideLoadingIndicator()
+        questionFactory?.requestNextQuestion()
+    }
+    
+    //Функция отвечающая за показ алерта при неудачной загрузке данных из сети
+    func didFailToLoadDataFromServer(with error: Error) {
+        let message = error.localizedDescription
+        viewController?.showNetworkError(message: message)
+    }
+    
+    
+    func didReceiveNextQuestion(question: QuizQuestion?) {
+        guard let question = question else {
+                return
+        }
+        currentQuestion = question
+        let viewModel = convert(model: question)
+        DispatchQueue.main.async { [weak self] in
+            self?.viewController?.show(quiz: viewModel)
+        }
+    }
+    
+    
     func isLastQuestion() -> Bool {
         currentQuestionIndex == questionsAmount - 1
     }
     
-    func resetCurrentQuestionIndex() {
+    func didAnswer(isCorrectAnswer: Bool){
+        if isCorrectAnswer {
+            correctAnswer += 1
+        }
+    }
+    
+    func restartGame() {
         currentQuestionIndex = 0
+        correctAnswer = 0
+        questionFactory?.requestNextQuestion()
     }
     
     func switchToNextQuestion() {
@@ -40,18 +81,7 @@ final class MovieQuizPresenter{
         let answer = isYes
         viewController?.showAnswerResult(isCorrect: answer == currentQuestion.correctAnswer)
     }
-    
-    func didReceiveNextQuestion(question: QuizQuestion?) {
-        guard let question = question else {
-                return
-        }
-        currentQuestion = question
-        let viewModel = convert(model: question)
-        DispatchQueue.main.async { [weak self] in
-            self?.viewController?.show(quiz: viewModel)
-        }
-    }
-    
+  
     //Функция отображения результата ответа
     func showNextQuestionOrResult(){
         if self.isLastQuestion() {
@@ -60,7 +90,6 @@ final class MovieQuizPresenter{
         } else {
             self.switchToNextQuestion()
             questionFactory?.requestNextQuestion()
-            //previewImage.layer.borderColor = UIColor.clear.cgColor
         }
     }
 }
