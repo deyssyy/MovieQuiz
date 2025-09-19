@@ -10,12 +10,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
     @IBOutlet private weak var questionTitleLabel: UILabel!
     @IBOutlet private weak var activityIndicator: UIActivityIndicatorView!
     
-    private var currentQuestionIndex = 0
     private var correctAnswer = 0
-    private let questionsAmount: Int = 10
     private var questionFactory: QuestionFactory?
-    private var currentQuestion: QuizQuestion?
     private var statisticService: StatisticServiceProtocol?
+    private let presenter = MovieQuizPresenter()
     
     // MARK: - Lifecycle
     
@@ -24,6 +22,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
         setupFont()
         setupImageView()
         showLoadingIndicator()
+        presenter.viewController = self
         questionFactory = QuestionFactory(delegate: self, moviesLoader: MoviesLoader())
         questionFactory?.loadData()
         statisticService = StatisticService()
@@ -32,32 +31,17 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
     // MARK: - QuestionFactoryDelegate
 
     func didReceiveNextQuestion(question: QuizQuestion?) {
-        guard let question = question else {
-                return
-        }
-        currentQuestion = question
-        let viewModel = convert(model: question)
-        DispatchQueue.main.async { [weak self] in
-               self?.show(quiz: viewModel)
-        }
+        presenter.didReceiveNextQuestion(question: question)
     }
     
     //Нажатие на кнопку "Да"
     @IBAction private func yesButtonClicked(_ sender: Any) {
-        guard let currentQuestion = currentQuestion else {
-            return
-        }
-        let answer = true
-        showAnswerResult(isCorrect: answer == currentQuestion.correctAnswer)
+        presenter.yesButtonClicked()
     }
     
     //Нажатие на кнопку "Нет"
     @IBAction private func noButtonClicked(_ sender: Any) {
-        guard let currentQuestion = currentQuestion else {
-            return
-        }
-        let answer = false
-        showAnswerResult(isCorrect: answer == currentQuestion.correctAnswer)
+        presenter.noButtonClicked()
     }
     
     //Функция отвечающая за запрос следующего вопроса и отображение индикатора загрузки
@@ -93,7 +77,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
                            message: message,
                            buttonText: buttonText) {[weak self] in
             guard let self = self else { return }
-            self.currentQuestionIndex = 0
+            self.presenter.resetCurrentQuestionIndex()
             self.correctAnswer = 0
             self.questionFactory?.requestNextQuestion()
         }
@@ -127,14 +111,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
         yesbutton.isEnabled = isEnabled
     }
     
-    //Конвертация вопроса для отображения
-    private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        let questionNumber = "\(currentQuestionIndex + 1)/\(questionsAmount)"
-        return QuizStepViewModel(image: UIImage(data: model.image) ?? UIImage(), question: model.text, questionNumber: questionNumber)
-    }
-    
     //Функция отображения текущего вопроса
-    private func show(quiz step: QuizStepViewModel){
+    func show(quiz step: QuizStepViewModel){
         if previewImage.isHidden {
             previewImage.isHidden = false
         }
@@ -145,7 +123,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
     
     //Функция для начала новой игры
     private func newGame(){
-        currentQuestionIndex = 0
+        presenter.resetCurrentQuestionIndex()
         correctAnswer = 0
         questionFactory?.requestNextQuestion()
         previewImage.layer.borderColor = UIColor.clear.cgColor
@@ -168,8 +146,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
     }
     
     //Функция отображения алерта об окончании квиза
-    private func show(quiz result: QuizResultViewModel){
-        statisticService?.store(correct: correctAnswer, total: questionsAmount)
+    func show(quiz result: QuizResultViewModel){
+        statisticService?.store(correct: correctAnswer, total: presenter.questionsAmount)
         let message = makeStatisticMessage(statistic: statisticService, current: result.text)
         let alert = AlertModel(title: result.title, message: message, buttonText: result.buttonText, completion: {[weak self] in
             guard let self = self else { return }
@@ -179,7 +157,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
     }
     
     //Функция покраски рамки изображения после ответа
-    private func showAnswerResult(isCorrect: Bool) {
+    func showAnswerResult(isCorrect: Bool) {
         if isCorrect {
             correctAnswer += 1
             previewImage.layer.borderColor = UIColor.ypGreen.cgColor
@@ -189,22 +167,15 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate{
         toggleButtons(isEnabled: false)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0){[weak self] in
             guard let self = self else { return }
-            self.showNextQuestionOrResult()
+            self.previewImage.layer.borderColor = UIColor.clear.cgColor
+            self.presenter.showNextQuestionOrResult()
+            self.presenter.correctAnswer = self.correctAnswer
+            self.presenter.questionFactory = self.questionFactory
             self.toggleButtons(isEnabled: true)
         }
     }
     
-    //Функция отображения результата ответа
-    private func showNextQuestionOrResult(){
-        if currentQuestionIndex == questionsAmount - 1 {
-            let result = QuizResultViewModel(title: "Этот раунд окончен", text: "Ваш результат: \(correctAnswer)/\(questionsAmount)", buttonText: "Сыграть ещё раз")
-            show(quiz: result)
-        } else {
-            currentQuestionIndex += 1
-            questionFactory?.requestNextQuestion()
-            previewImage.layer.borderColor = UIColor.clear.cgColor
-        }
-    }
+    
 }
 
 /*
