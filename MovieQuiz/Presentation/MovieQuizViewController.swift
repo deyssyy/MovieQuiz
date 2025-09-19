@@ -10,7 +10,6 @@ final class MovieQuizViewController: UIViewController {
     @IBOutlet private weak var questionTitleLabel: UILabel!
     @IBOutlet private weak var activityIndicator: UIActivityIndicatorView!
     
-    private var statisticService: StatisticServiceProtocol?
     private var presenter: MovieQuizPresenter!
     
     // MARK: - Lifecycle
@@ -21,12 +20,8 @@ final class MovieQuizViewController: UIViewController {
         setupImageView()
         showLoadingIndicator()
         presenter = MovieQuizPresenter(viewController: self)
-        statisticService = StatisticService()
     }
-    
-    // MARK: - QuestionFactoryDelegate
-
-   
+    // MARK: - IBActions
     
     //Нажатие на кнопку "Да"
     @IBAction private func yesButtonClicked(_ sender: Any) {
@@ -37,6 +32,8 @@ final class MovieQuizViewController: UIViewController {
     @IBAction private func noButtonClicked(_ sender: Any) {
         presenter.noButtonClicked()
     }
+    
+    // MARK: - Вспомогательные функции
     
     //Функция отвечающая за показ и старт анимации у индикатора загрузки
     func showLoadingIndicator() {
@@ -49,7 +46,6 @@ final class MovieQuizViewController: UIViewController {
         activityIndicator.isHidden = true
         activityIndicator.stopAnimating()
     }
-    
     
     //Функция отвечающая за создание алерта при неудачной загрузке из сети
     func showNetworkError(message: String){
@@ -78,7 +74,7 @@ final class MovieQuizViewController: UIViewController {
         questionTitleLabel.font = fontMedium
     }
     
-    //функция настройки рвмки изображения
+    //функция настройки рамки изображения
     private func setupImageView(){
         previewImage.isHidden = true
         previewImage.layer.masksToBounds = true
@@ -88,7 +84,7 @@ final class MovieQuizViewController: UIViewController {
     }
     
     //Функция отключения кнопок(антиспам)
-    private func toggleButtons(isEnabled: Bool){
+    func toggleButtons(isEnabled: Bool){
         nobutton.isEnabled = isEnabled
         yesbutton.isEnabled = isEnabled
     }
@@ -103,33 +99,10 @@ final class MovieQuizViewController: UIViewController {
         questionLabel.text = step.question
         indexLabel.text = step.questionNumber
     }
-    
-//    //Функция для начала новой игры
-//    private func newGame(){
-//        presenter.restartGame()
-//        previewImage.layer.borderColor = UIColor.clear.cgColor
-//    }
-//    
-    //Функция генерации сообщения статистики
-    private func makeStatisticMessage(statistic: StatisticServiceProtocol?, current gameMessage: String) -> String{
-        guard let gamesCount = statistic?.gamesCount else {return gameMessage}
-        guard let correctAnswers = statistic?.bestGame.correct else {return gameMessage}
-        guard let questionCount = statistic?.bestGame.total else {return gameMessage}
-        guard let date = statistic?.bestGame.date else {return gameMessage}
-        guard let accuracy = statistic?.totalAccuracy else {return gameMessage}
-        let statMessage = """
-           \(gameMessage)
-           Количество сыграных квизов: \(gamesCount)
-           Рекород: \(correctAnswers)/\(questionCount) (\(date.dateTimeString))
-           Средняя точность: \(String(format: "%.2f", accuracy))%
-           """
-        return statMessage
-    }
-    
+        
     //Функция отображения алерта об окончании квиза
     func show(quiz result: QuizResultViewModel){
-        statisticService?.store(correct: presenter.correctAnswer, total: presenter.questionsAmount)
-        let message = makeStatisticMessage(statistic: statisticService, current: result.text)
+        let message = presenter.makeStatisticMessage(current: result.text)
         let alert = AlertModel(title: result.title, message: message, buttonText: result.buttonText, completion: {[weak self] in
             guard let self = self else { return }
             self.presenter.restartGame()
@@ -137,23 +110,10 @@ final class MovieQuizViewController: UIViewController {
         AlertPresenter.alertPresten(vc: self, alertModel: alert)
     }
     
-    //Функция покраски рамки изображения после ответа
-    func showAnswerResult(isCorrect: Bool) {
-        presenter.didAnswer(isCorrectAnswer: isCorrect)
-        if isCorrect {
-            previewImage.layer.borderColor = UIColor.ypGreen.cgColor
-        } else {
-            previewImage.layer.borderColor = UIColor.ypRed.cgColor
-        }
-        toggleButtons(isEnabled: false)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0){[weak self] in
-            guard let self = self else { return }
-            self.presenter.showNextQuestionOrResult()
-            self.toggleButtons(isEnabled: true)
-        }
+    //функция покраски рамки изображения
+    func highlightImageBorder(isCorrect: Bool){
+        previewImage.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
     }
-    
-    
 }
 
 /*

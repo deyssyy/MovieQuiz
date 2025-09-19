@@ -1,15 +1,19 @@
 import UIKit
 
 final class MovieQuizPresenter: QuestionFactoryDelegate{
-    let questionsAmount: Int = 10
-    var correctAnswer: Int = 0
+    private let questionsAmount: Int = 10
+    private var correctAnswer: Int = 0
     private var currentQuestionIndex = 0
-    var currentQuestion: QuizQuestion?
-    weak var viewController: MovieQuizViewController?
-    var questionFactory: QuestionFactoryProtocol?
+    private var currentQuestion: QuizQuestion?
+    
+    private weak var viewController: MovieQuizViewController?
+    private var questionFactory: QuestionFactoryProtocol?
+    private let statisticService: StatisticServiceProtocol!
     
     init(viewController: MovieQuizViewController) {
         self.viewController = viewController
+        
+        statisticService = StatisticService()
         
         questionFactory = QuestionFactory(delegate: self, moviesLoader: MoviesLoader())
         questionFactory?.loadData()
@@ -28,7 +32,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate{
         viewController?.showNetworkError(message: message)
     }
     
-    
+    //Проверка наличия следующего вопроса
     func didReceiveNextQuestion(question: QuizQuestion?) {
         guard let question = question else {
                 return
@@ -39,57 +43,93 @@ final class MovieQuizPresenter: QuestionFactoryDelegate{
             self?.viewController?.show(quiz: viewModel)
         }
     }
-    
-    
+   
+    //Проверка последнего вопроса
     func isLastQuestion() -> Bool {
         currentQuestionIndex == questionsAmount - 1
     }
     
+    //Проверка правильности ответа
     func didAnswer(isCorrectAnswer: Bool){
         if isCorrectAnswer {
             correctAnswer += 1
         }
     }
     
+    //Функция начала новой игры
     func restartGame() {
         currentQuestionIndex = 0
         correctAnswer = 0
         questionFactory?.requestNextQuestion()
     }
     
+    //Функция перехода к следующему вопросу
     func switchToNextQuestion() {
         currentQuestionIndex += 1
     }
     
+    //Функция конвертации вопроса
     func convert(model: QuizQuestion) -> QuizStepViewModel {
         let questionNumber = "\(currentQuestionIndex + 1)/\(questionsAmount)"
         return QuizStepViewModel(image: UIImage(data: model.image) ?? UIImage(), question: model.text, questionNumber: questionNumber)
     }
     
+    //Функция нажатия кнопки Да
     func yesButtonClicked() {
         didAnswer(isYes: true)
     }
    
+    //Функция нажатия кнопки нет
     func noButtonClicked() {
         didAnswer(isYes: false)
     }
     
+    //Вспомогательная функция наэатия на кнопку ответа
     private func didAnswer(isYes: Bool){
         guard let currentQuestion = currentQuestion else {
             return
         }
         let answer = isYes
-        viewController?.showAnswerResult(isCorrect: answer == currentQuestion.correctAnswer)
+        proceedWithAnswer(isCorrect: answer == currentQuestion.correctAnswer)
     }
   
     //Функция отображения результата ответа
-    func showNextQuestionOrResult(){
+    private func proceedToNextQuestionOrResult(){
         if self.isLastQuestion() {
-            let result = QuizResultViewModel(title: "Этот раунд окончен", text: "Ваш результат: \(correctAnswer)/\(questionsAmount)", buttonText: "Сыграть ещё раз")
+            let result = QuizResultViewModel(title: "Этот раунд окончен",
+                                       text: "Ваш результат: \(correctAnswer)/\(questionsAmount)",
+                                       buttonText: "Сыграть ещё раз")
             viewController?.show(quiz: result)
         } else {
             self.switchToNextQuestion()
             questionFactory?.requestNextQuestion()
         }
+    }
+    
+    //Функция отображения результата ответа
+    private func proceedWithAnswer(isCorrect: Bool) {
+        didAnswer(isCorrectAnswer: isCorrect)
+        viewController?.highlightImageBorder(isCorrect: isCorrect)
+        viewController?.toggleButtons(isEnabled: false)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0){[weak self] in
+            guard let self = self else { return }
+            self.proceedToNextQuestionOrResult()
+            self.viewController?.toggleButtons(isEnabled: true)
+        }
+    }
+    
+    //Функция генерации сообщения статистики
+    func makeStatisticMessage(current gameMessage: String) -> String{
+        statisticService.store(correct: correctAnswer, total: questionsAmount)
+        
+        let bestGame = statisticService.bestGame
+    
+        let statMessage = """
+           \(gameMessage)
+           Количество сыграных квизов: \(statisticService.gamesCount)
+           Рекород: \(bestGame.correct)/\(bestGame.total) (\(bestGame.date.dateTimeString))
+           Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy))%
+           """
+        return statMessage
     }
 }
