@@ -1,10 +1,3 @@
-//
-//  MovieQuizUITests.swift
-//  MovieQuizUITests
-//
-//  Created by nikita on 17.09.2025.
-//
-
 import XCTest
 
 final class MovieQuizUITests: XCTestCase {
@@ -95,10 +88,7 @@ final class MovieQuizUITests: XCTestCase {
     
     @MainActor
     func testExample() throws {
-        // UI tests must launch the application that they test.
         let app = XCUIApplication()
         app.launch()
-
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
     }
 }

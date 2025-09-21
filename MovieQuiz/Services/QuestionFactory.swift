@@ -70,7 +70,8 @@ final class QuestionFactory: QuestionFactoryProtocol {
             let targetRating = Int.random(in: 1...9)
             var text = ""
             var correctAnswer: Bool = false
-            switch Int.random(in: 0...1){
+            let questionCase = Int.random(in: 0...1)
+            switch questionCase{
                 case 0:  
                 text = "Рейтинг этого фильма больше чем \(targetRating)?"
                 correctAnswer = rating > Float(targetRating)
