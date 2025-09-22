@@ -53,7 +53,7 @@ struct StubNetworkClient: NetworkRouting{
     }
 }
 
-class MovieLoaderTests: XCTestCase {
+final class MovieLoaderTests: XCTestCase {
     func testSuccessLoading() throws {
         //Given
         let stubNetworkCliet = StubNetworkClient(emulatedError: false)

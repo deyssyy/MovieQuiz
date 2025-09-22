@@ -45,11 +45,11 @@ final class MovieQuizPresenterTests: XCTestCase {
         XCTAssertEqual(viewModel.questionNumber, "1/10")
     }
     
-    func testmakeStatisticMessage() throws{
+    func testMakeStatisticMessage() throws{
         let viewControllerMock = MovieQuizVeiwControllerMock()
         let sut = MovieQuizPresenter(viewController: viewControllerMock)
         
-        let testString = sut.makeStatisticMessage(current: "1")
+        let testString = sut.makeStatisticMessage(current: "test")
         
         XCTAssertNotNil(testString)
     }
